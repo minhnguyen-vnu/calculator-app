@@ -30,9 +30,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CalculatorAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    CalculatorScreen(modifier = Modifier.padding(innerPadding))
+            var isDarkMode by remember { mutableStateOf(false) }
+            CalculatorAppTheme(darkTheme = isDarkMode) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    containerColor = MaterialTheme.colorScheme.background
+                ) { innerPadding ->
+                    CalculatorScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        isDarkMode = isDarkMode,
+                        onThemeToggle = { isDarkMode = !isDarkMode }
+                    )
                 }
             }
         }
@@ -40,7 +48,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CalculatorScreen(modifier: Modifier = Modifier) {
+fun CalculatorScreen(
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean,
+    onThemeToggle: () -> Unit
+) {
     var expression by remember { mutableStateOf("") }
     var result by remember { mutableStateOf("") }
 
@@ -58,6 +70,19 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
             .padding(16.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
+        // Theme Toggle Button
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = onThemeToggle,
+                modifier = Modifier.align(Alignment.TopStart)
+            ) {
+                Text(
+                    text = if (isDarkMode) "☀️" else "🌙",
+                    fontSize = 24.sp
+                )
+            }
+        }
+
         // Display Area
         Column(
             modifier = Modifier
@@ -68,11 +93,18 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = expression,
-                style = TextStyle(fontSize = 24.sp, color = Color.Gray)
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    color = if (isDarkMode) Color.LightGray else Color.Gray
+                )
             )
             Text(
                 text = if (result.isEmpty()) "0" else result,
-                style = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold)
+                style = TextStyle(
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
 
@@ -85,6 +117,7 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
                 row.forEach { label ->
                     CalculatorButton(
                         label = label,
+                        isDarkMode = isDarkMode,
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
@@ -96,16 +129,21 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
                                 result = ""
                             }
                             "del" -> {
-                                if (expression.isNotEmpty()) {
+                                if (result.isNotEmpty()) {
+                                    result = "" // Clear result if starting to delete from it
+                                } else if (expression.isNotEmpty()) {
                                     expression = expression.dropLast(1)
                                 }
                             }
                             "%" -> {
-                                if (expression.isNotEmpty()) {
+                                val target = if (result.isNotEmpty()) result else expression
+                                if (target.isNotEmpty()) {
                                     try {
-                                        val value = expression.toDouble() / 100
+                                        val value = target.toDouble() / 100
                                         expression = value.toString()
+                                        result = ""
                                     } catch (e: Exception) {
+                                        // Handle case where target is not just a number
                                     }
                                 }
                             }
@@ -114,6 +152,7 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
                                     try {
                                         val evalExpression = expression.replace("x", "*")
                                         val evalResult = ExpressionBuilder(evalExpression).build().evaluate()
+                                        // Format result: remove .0 if it's a whole number
                                         result = if (evalResult % 1 == 0.0) {
                                             evalResult.toLong().toString()
                                         } else {
@@ -125,7 +164,18 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
                                 }
                             }
                             else -> {
-                                expression += label
+                                if (result.isNotEmpty()) {
+                                    if (label in listOf("+", "-", "x", "/")) {
+                                        // Continue calculation with result
+                                        expression = result + label
+                                    } else {
+                                        // Start new calculation
+                                        expression = label
+                                    }
+                                    result = ""
+                                } else {
+                                    expression += label
+                                }
                             }
                         }
                     }
@@ -136,17 +186,31 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun CalculatorButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val backgroundColor = when (label) {
-        "C" -> ColorPink
-        "/", "x", "-", "+" -> ColorOrange
-        "=" -> ColorGreen
-        else -> ColorLightBlue
+fun CalculatorButton(
+    label: String,
+    isDarkMode: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isDarkMode) {
+        when (label) {
+            "C" -> Color(0xFF633D41) // Muted Dark Pink
+            "/", "x", "-", "+" -> ColorOrange
+            "=" -> ColorGreen
+            else -> Color(0xFF2C2C2C) // Dark Gray
+        }
+    } else {
+        when (label) {
+            "C" -> ColorPink
+            "/", "x", "-", "+" -> ColorOrange
+            "=" -> ColorGreen
+            else -> ColorLightBlue
+        }
     }
 
     val contentColor = when (label) {
         "/", "x", "-", "+", "=" -> Color.White
-        else -> Color.Black
+        else -> if (isDarkMode) Color.White else Color.Black
     }
 
     Surface(
