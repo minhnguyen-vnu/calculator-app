@@ -88,50 +88,47 @@ fun CalculatorScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
-                            .padding(vertical = 5.dp),
-                        onClick = {
-                            when (label) {
-                                "C" -> {
-                                    expression = ""
-                                    result = ""
-                                }
-                                "del" -> {
-                                    if (expression.isNotEmpty()) {
-                                        expression = expression.dropLast(1)
-                                    }
-                                }
-                                "%" -> {
-                                    if (expression.isNotEmpty()) {
-                                        try {
-                                            val value = expression.toDouble() / 100
-                                            expression = value.toString()
-                                        } catch (e: Exception) {
-                                            // Handle case where expression is not just a number
-                                        }
-                                    }
-                                }
-                                "=" -> {
-                                    if (expression.isNotEmpty()) {
-                                        try {
-                                            val evalExpression = expression.replace("x", "*")
-                                            val evalResult = ExpressionBuilder(evalExpression).build().evaluate()
-                                            // Format result: remove .0 if it's a whole number
-                                            result = if (evalResult % 1 == 0.0) {
-                                                evalResult.toLong().toString()
-                                            } else {
-                                                evalResult.toString()
-                                            }
-                                        } catch (e: Exception) {
-                                            result = "Error"
-                                        }
-                                    }
-                                }
-                                else -> {
-                                    expression += label
+                            .padding(vertical = 5.dp)
+                    ) {
+                        when (label) {
+                            "C" -> {
+                                expression = ""
+                                result = ""
+                            }
+                            "del" -> {
+                                if (expression.isNotEmpty()) {
+                                    expression = expression.dropLast(1)
                                 }
                             }
+                            "%" -> {
+                                if (expression.isNotEmpty()) {
+                                    try {
+                                        val value = expression.toDouble() / 100
+                                        expression = value.toString()
+                                    } catch (e: Exception) {
+                                    }
+                                }
+                            }
+                            "=" -> {
+                                if (expression.isNotEmpty()) {
+                                    try {
+                                        val evalExpression = expression.replace("x", "*")
+                                        val evalResult = ExpressionBuilder(evalExpression).build().evaluate()
+                                        result = if (evalResult % 1 == 0.0) {
+                                            evalResult.toLong().toString()
+                                        } else {
+                                            evalResult.toString()
+                                        }
+                                    } catch (e: Exception) {
+                                        result = "Error"
+                                    }
+                                }
+                            }
+                            else -> {
+                                expression += label
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
